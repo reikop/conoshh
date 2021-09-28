@@ -17,7 +17,10 @@ export default class MusicPlayer extends MessageWorker {
 
         this._player.on("songChanged", this.playerSongChanged.bind(this));
         this._player.on("queueEnd", this.playerEventHandler.bind(this));
-        this._player.on("error", this.playerEventHandler.bind(this));
+        this._player.on("error", (error, queue) => {
+            console.log(`Error: ${error} in ${queue.guild.name}`);
+            this.updateError(message, "`오류가 발생했습니다.`");
+        });
         // this._player.on('channelEmpty',  (queue) =>
         //     console.log(`Everyone left the Voice Channel, queue ended.`))
         //     // Emitted when a song was added to the queue.
