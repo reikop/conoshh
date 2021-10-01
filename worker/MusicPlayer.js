@@ -1,6 +1,7 @@
 import MessageWorker from "../MessageWorker.js";
 import {Player, RepeatMode} from "discord-music-player";
 import Discord from "discord.js";
+
 import _ from "lodash"
 
 /**
@@ -13,41 +14,14 @@ export default class MusicPlayer extends MessageWorker {
         super();
         this._player = new Player(client);
         this._client = client;
-        this.getMusicServerLists();
+        this.getMusicServerLists()
 
         this._player.on("songChanged", this.playerSongChanged.bind(this));
         this._player.on("queueEnd", this.playerEventHandler.bind(this));
+        this._player.on('channelEmpty',  (queue) => this.playerEventHandler(queue));
         this._player.on("error", (error, queue) => {
             console.error(error);
         });
-        // this._player.on('channelEmpty',  (queue) =>
-        //     console.log(`Everyone left the Voice Channel, queue ended.`))
-        //     // Emitted when a song was added to the queue.
-        //     .on('songAdd',  (queue, song) =>
-        //         console.log(`Song ${song} was added to the queue.`))
-        //     // Emitted when a playlist was added to the queue.
-        //     .on('playlistAdd',  (queue, playlist) =>
-        //         console.log(`Playlist ${playlist} with ${playlist.songs.length} was added to the queue.`))
-        //     // Emitted when there was no more music to play.
-        //     .on('queueEnd',  (queue) =>
-        //         console.log(`The queue has ended.`))
-        //     // Emitted when a song changed.
-        //     .on('songChanged', (queue, newSong, oldSong) =>
-        //         console.log(`${newSong} is now playing.`))
-        //     // Emitted when a first song in the queue started playing.
-        //     .on('songFirst',  (queue, song) =>
-        //         console.log(`Started playing ${song}.`))
-        //     // Emitted when someone disconnected the bot from the channel.
-        //     .on('clientDisconnect', (queue) =>
-        //         console.log(`I was kicked from the Voice Channel, queue ended.`))
-        //     // Emitted when deafenOnJoin is true and the bot was undeafened
-        //     .on('clientUndeafen', (queue) =>
-        //         console.log(`I got undefeanded.`))
-        //     // Emitted when there was an error in runtime
-        //     .on('error', (error, queue) => {
-        //         console.log(`Error: ${error} in ${queue.guild.name}`);
-        //     });
-
     }
     _client;
     _player;
@@ -86,9 +60,13 @@ export default class MusicPlayer extends MessageWorker {
             const {songs} = this.player.getQueue(channel.guild.id);
             if(songs.length > 0){
                 const song = songs[0];
+                let repeatModeText = "";
+                if(song.queue && song.queue.repeatMode){
+                    repeatModeText = "[반복중] ";
+                }
                 const currentSong = new Discord.MessageEmbed()
                     .setColor("LUMINOUS_VIVID_PINK")
-                    .setTitle(`[${song.duration}] - ${song.name}`)
+                    .setTitle(repeatModeText + `[${song.duration}] - ${song.name}`)
                     .setImage(song.thumbnail)
                     .setURL(song.url);
                 const que = songs.map((song, i) => `${i+1}. ${song.name} [${song.duration}]`);
@@ -100,7 +78,9 @@ export default class MusicPlayer extends MessageWorker {
             }else if(songs.length === 0){
                 const order = [
                     {key: '나가', value: '바로 종료'},
-                    {key: '다음', value: '다음 곡'}
+                    {key: '다음', value: '다음 곡'},
+                    {key: '반복', value: '한 곡 반복듣기'},
+                    {key: '그만', value: '반복듣기 끄기'}
                 ];
                 await channel.send({
                     embeds: [
@@ -108,10 +88,10 @@ export default class MusicPlayer extends MessageWorker {
                             // .setAuthor(`made By 동매 (aka. reikop)`,
                             //     null,
                             //     `https://reikop.com`)
-                            .setTitle(`노래하는 코노슝 v0.1 명령어`)
+                            .setTitle(`노래하는 코노슝 v0.2 명령어`)
                             .setColor("DARK_BLUE")
                             .setDescription("노래 제목 혹은 유튜브 URL을 입력하시면 자동으로 노래를 검색합니다.")
-                            .setThumbnail("https://imgfiles-cdn.plaync.com/file/contents/download/20210923131701-aKxbqDhdNhkVeKMG09160-v4")
+                            // .setThumbnail("https://imgfiles-cdn.plaync.com/file/contents/download/20210923131701-aKxbqDhdNhkVeKMG09160-v4")
                             .addField('명령어', order.map(o => `${o.key} : ${o.value}`).join("\n"), true)
                             .setTimestamp()
                     ]
@@ -120,7 +100,9 @@ export default class MusicPlayer extends MessageWorker {
         }catch (e){
             const order = [
                 {key: '나가', value: '바로 종료'},
-                {key: '다음', value: '다음 곡'}
+                {key: '다음', value: '다음 곡'},
+                {key: '반복', value: '한 곡 반복듣기'},
+                {key: '그만', value: '반복듣기 끄기'}
             ];
             await channel.send({
                 embeds: [
@@ -128,10 +110,10 @@ export default class MusicPlayer extends MessageWorker {
                         // .setAuthor(`made By 동매 (aka. reikop)`,
                         //     null,
                         //     `https:/제/reikop.com`)
-                        .setTitle(`노래하는 코노슝 v0.1 명령어`)
+                        .setTitle(`노래하는 코노슝 v0.2 명령어`)
                         .setColor("DARK_BLUE")
                         .setDescription("노래 제목 혹은 유튜브 URL을 입력하시면 자동으로 노래를 검색합니다.")
-                        .setThumbnail("https://imgfiles-cdn.plaync.com/file/contents/download/20210923131701-aKxbqDhdNhkVeKMG09160-v4")
+                        // .setThumbnail("https://imgfiles-cdn.plaync.com/file/contents/download/20210923131701-aKxbqDhdNhkVeKMG09160-v4")
                         .addField('명령어', order.map(o => `${o.key} : ${o.value}`).join("\n"), true)
                         .setTimestamp()
                 ]
@@ -160,23 +142,31 @@ export default class MusicPlayer extends MessageWorker {
         try {
             if (message.author.id === '366297167247310860') {
                 if (message.content === "코노슝 설치") {
-                    // const channel = await message.guild.channels.create("노래하는-코노슝", {type: 'GUILD_TEXT'});
-                    await this.addMusicServer(message.channel);
+                    const permis = ['SEND_MESSAGES', 'MANAGE_MESSAGES', 'CONNECT', 'SPEAK', 'DEAFEN_MEMBERS'];
+                    const permit = !permis.some(p => !message.guild.me.permissions.has(p));
+                    if(permit){
+                        await this.addMusicServer(message.channel);
+                        await message.channel.send({
+                            embeds: [
+                                new Discord.MessageEmbed()
+                                    .setColor("GOLD")
+                                    .setTitle("코노슝 설치가 완료 되었습니다.")
+                                    .setDescription("개발자 전용 명령어 입니다.")
+                            ]
+                        });
+                    }else{
+                        await message.channel.send('필요한 `권한`이 없습니다. 봇을 다시 등록하거나 관리자에게 문의해주세요.');
+                    }
                     await message.delete();
-                    await message.channel.send({
-                        embeds: [
-                            new Discord.MessageEmbed()
-                                .setColor("GOLD")
-                                .setTitle("코노슝 설치가 완료 되었습니다.")
-                                .setDescription("개발자 전용 명령어 입니다.")
-                        ]
-                    });
                     return;
                 }
             }
             const server = _.find(this.servers, {guildId: message.guild.id, id: message.channel.id});
             if (!server) {
                 return;
+            }
+            if (!message.author.bot){
+                message.channel.sendTyping();
             }
             const args = message.content.slice("!").trim().split(/ +/g);
             const command = args.shift();
@@ -186,6 +176,16 @@ export default class MusicPlayer extends MessageWorker {
                     guildQueue.skip();
                     message.delete();
                 }
+            } else if (command === '반복') {
+                guildQueue.setRepeatMode(RepeatMode.SONG);
+                message.delete();
+                await this.clearChannel(message.channel);
+                await this.updateSong(message.channel);
+            } else if (command === '그만') {
+                guildQueue.setRepeatMode(RepeatMode.DISABLED);
+                message.delete();
+                await this.clearChannel(message.channel);
+                await this.updateSong(message.channel);
             } else if (command === '나가') {
                 if (guildQueue) {
                     guildQueue.stop();
@@ -196,6 +196,7 @@ export default class MusicPlayer extends MessageWorker {
                 let queue = this.player.createQueue(message.guild.id);
                 if(message.member.voice.channel){
                     queue.join(message.member.voice.channel).then(async c => {
+                        message.guild.me.voice.setDeaf(true);
                         queue.play(message.content).then(song => {
                             this.updateSong(message.channel, song)
                         }).catch(_ => {
