@@ -53,7 +53,7 @@ export default class MusicPlayer extends MessageWorker {
 
     async updateError(message, reason){
         // await this.updateSong(message.channel);
-        await message.channel.send(reason);
+        await message.channel.send(reason).catch(()=>{})
     }
     async updateSong(channel) {
         try{
@@ -196,7 +196,7 @@ export default class MusicPlayer extends MessageWorker {
                 let queue = this.player.createQueue(message.guild.id);
                 if(message.member.voice.channel){
                     queue.join(message.member.voice.channel).then(async c => {
-                        message.guild.me.voice.setDeaf(true);
+                        message.guild.me.voice.setDeaf(true).catch(()=>{});
                         queue.play(message.content).then(song => {
                             this.updateSong(message.channel, song)
                         }).catch(_ => {
