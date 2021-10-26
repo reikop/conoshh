@@ -22,6 +22,7 @@ const router = new MessageRouter();
 router.registWorker("*", new MusicPlayer(client));
 
 client.on('message', async msg => router.receiveMessage(msg));
+console.info("DISCORD_KEY", DISCORD_KEY)
 client.login(DISCORD_KEY);
 
 process.on("uncaughtException", error => {
