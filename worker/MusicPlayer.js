@@ -19,7 +19,7 @@ export default class MusicPlayer extends MessageWorker {
         });
         this._client = client;
         this.getMusicServerLists()
-
+        // client.on("messageReactionAdd", this.reactionHandler.bind(this));
         this._player.on("songChanged", this.playerSongChanged.bind(this));
         this._player.on("queueEnd", this.playerEventHandler.bind(this));
         this._player.on('channelEmpty',  (queue) => this.playerEventHandler(queue));
@@ -36,6 +36,10 @@ export default class MusicPlayer extends MessageWorker {
     get player() {
         return this._player;
     }
+    //
+    // reactionHandler(reaction, user){
+    //     console.info(reaction.message.author.bot, reaction.me, reaction.emoji.name)
+    // }
 
     playerSongChanged(que){
         const server = _.find(this.servers, {guildId: que.guild.id});
@@ -62,37 +66,58 @@ export default class MusicPlayer extends MessageWorker {
     async updateBotMessage(channel, content){
         channel.messages.fetch({ limit: 100 }).then(messages => {
             const msgs = messages.filter(m => m.author.bot);
-            if(msgs.size){
+            if(msgs.size > 0){
                 for (let i = 0; i < msgs.size; i++) {
                     const isLast = i+1 === msgs.size;
                     if(!isLast){
                         channel.bulkDelete(messages);
                     }else{
-                        // await channel.send({
-                        //     embeds: [currentSong]
-                        // });
-                        msgs.last().edit(content);
+                        msgs.last().edit(content).then(msg => {
+                            this.updateReacts(msg);
+                        })
                     }
                 }
             }else{
-                channel.send(content);
+                channel.send(content)
             }
         });
+
     }
+
+    async updateReacts(message){
+        // await message.reactions.removeAll();
+        // const queue = this.player.getQueue(message.guild.id);
+        // if(queue && queue.songs){
+        //     const songs = queue.songs;
+        //     if(queue.songs && songs.length > 0){
+        //         await message.react("⏹");
+        //         if(songs.length > 1){
+        //             await message.react("⏭");
+        //         }
+        //     }else{
+        //         message.reactions.removeAll().then();
+        //     }
+            // const ["⏮️","⏹️","⏭️"];
+            // msgs.last().edit(content/).then((msg) => {
+            //     reacts.forEach(r => {
+            //         msg.react(r)
+            //     })
+            // })
+        // }
+
+    }
+
     async updateSong(channel) {
         try{
             const queue = this.player.getQueue(channel.guild.id);
             const songs = queue.songs
             if(queue.songs && songs.length > 0){
                 const song = songs[0];
-                let repeatModeText = "";
-                if(song.queue && song.queue.repeatMode){
-                    repeatModeText = "[반복중] ";
-                }
+                const repeatModeText = song.queue && song.queue.repeatMode ? "🔁 " : "💿 ";
                 const que = songs.map((song, i) => `${i+1}. ${song.name} [${song.duration}]`);
                 const currentSong = new Discord.MessageEmbed()
                     .setColor("LUMINOUS_VIVID_PINK")
-                    .setTitle(repeatModeText + `💿 [${song.duration}] ${song.name}`)
+                    .setTitle(repeatModeText + `[${song.duration}] ${song.name}`)
                     .setImage(song.thumbnail)
                     .setTimestamp(new Date())
                     .setURL(song.url);
@@ -102,7 +127,7 @@ export default class MusicPlayer extends MessageWorker {
                 }
                 // await channel.
                 // await channel.send(que.join("\n"));
-                await this.updateBotMessage(channel, {embeds: [currentSong]})
+                await this.updateBotMessage(channel, {embeds: [currentSong]});
             }else if(songs.length === 0){
                 const order = [
                     {key: '나가', value: '바로 종료'},
@@ -153,7 +178,7 @@ export default class MusicPlayer extends MessageWorker {
 
     clearAllChannel(channel) {
         channel.messages.fetch({ limit: 100 }).then(messages => {
-            channel.bulkDelete(messages);
+            channel.bulkDelete(messages).then().catch();
         });
 
 
@@ -201,7 +226,7 @@ export default class MusicPlayer extends MessageWorker {
                 return;
             }
             if (!message.author.bot){
-                message.channel.sendTyping();
+                message.channel.sendTyping().then().catch();
             }
             const args = message.content.slice("!").trim().split(/ +/g);
             const command = args.shift();
@@ -237,6 +262,7 @@ export default class MusicPlayer extends MessageWorker {
                             if (!guildQueue) {
                                 queue.stop();
                             }
+                            console.info(_)
                             this.updateError(message, "오류가 발생했습니다.");
                         });
                     }).catch(e => {
