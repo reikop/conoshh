@@ -9,4 +9,4 @@ COPY package.json /usr/src/bot
 RUN npm install
 COPY . /usr/src/bot
 
-ENTRYPOINT node index.js --key=$DISCORD_TOKEN
+ENTRYPOINT node index.js

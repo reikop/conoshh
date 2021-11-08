@@ -23,9 +23,6 @@ export default class MusicPlayer extends MessageWorker {
         this._player.on("songChanged", this.playerSongChanged.bind(this));
         this._player.on("queueEnd", this.playerEventHandler.bind(this));
         this._player.on('channelEmpty',  (queue) => this.playerEventHandler(queue));
-        this._player.on("error", (error, queue) => {
-            console.error(error);
-        });
     }
     _client;
     _player;
@@ -36,10 +33,6 @@ export default class MusicPlayer extends MessageWorker {
     get player() {
         return this._player;
     }
-    //
-    // reactionHandler(reaction, user){
-    //     console.info(reaction.message.author.bot, reaction.me, reaction.emoji.name)
-    // }
 
     playerSongChanged(que){
         const server = _.find(this.servers, {guildId: que.guild.id});
@@ -258,16 +251,14 @@ export default class MusicPlayer extends MessageWorker {
                     queue.join(message.member.voice.channel).then(async c => {
                         queue.play(message.content).then(song => {
                             this.updateSong(message.channel, song)
-                        }).catch(_ => {
+                        }).catch(e => {
                             if (!guildQueue) {
                                 queue.stop();
                             }
-                            console.info(_)
-                            this.updateError(message, "오류가 발생했습니다.");
+                            this.updateError(message, "음악을 재생할수 없어 종료합니다.");
                         });
                     }).catch(e => {
-                        console.error(e);
-                        this.updateError(message, "오류가 발생했습니다.");
+                        this.updateError(message, "음성채널에 입장할수 없습니다.");
                     });
                 }else{
                     this.updateError(message, "`접속한 음성채널을 찾을 수 없습니다.`");
@@ -275,8 +266,6 @@ export default class MusicPlayer extends MessageWorker {
 
                 message.delete();
             }
-        } catch (e) {
-            console.error(e)
-        }
+        } catch (e) { }
     }
 }
