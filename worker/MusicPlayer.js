@@ -1,58 +1,49 @@
 import MessageWorker from "../MessageWorker.js";
-import {Player, RepeatMode} from "discord-music-player";
 import Discord from "discord.js";
 
 import _ from "lodash"
+import {Manager} from "erela.js";
 
 /**
  * https://github.com/SushiBtw/discord-music-player
  * https://discord-music-player.js.org/
  */
 export default class MusicPlayer extends MessageWorker {
-
     constructor(client) {
         super();
-        this._player = new Player(client, {
-            deafenOnJoin: true,
-            volume: 50,
-            timeout: 60
-        });
+        client.manager = new Manager({
+            nodes: [
+                {
+                    host:"10.0.0.250",
+                    port: 2333,
+                    password: "youshallnotpass",
+                },
+            ],
+            send(id, payload) {
+                const guild = client.guilds.cache.get(id);
+                if (guild) guild.shard.send(payload);
+            },
+        })
+            .on("trackStuck", (player) => {
+                this.updateSong(player);
+            })
+            .on("queueEnd", (player) => {
+                this.updateSong(player);
+                player.destroy();
+            });
+
         this._client = client;
-        this.getMusicServerLists()
-        // client.on("messageReactionAdd", this.reactionHandler.bind(this));
-        this._player.on("songChanged", this.playerSongChanged.bind(this));
-        this._player.on("queueEnd", this.playerEventHandler.bind(this));
-        this._player.on('channelEmpty',  (queue) => this.playerEventHandler(queue));
+        this.getMusicServerLists().then();
+        client.manager.init(client.user.id);
+        client.on("raw", (d) => client.manager.updateVoiceState(d));
     }
     _client;
-    _player;
     _servers = [];
     get servers(){
         return this._servers;
     }
-    get player() {
-        return this._player;
-    }
-
-    playerSongChanged(que){
-        const server = _.find(this.servers, {guildId: que.guild.id});
-        if(server){
-            const id = server.id
-            const channel = this._client.channels.cache.get(id);
-            this.updateSong(channel);
-        }
-    }
-    async playerEventHandler(que) {
-        const server = _.find(this.servers, {guildId: que.guild.id});
-        if (server) {
-            const id = server.id
-            const channel = this._client.channels.cache.get(id);
-            await this.updateSong(channel);
-        }
-    }
 
     async updateError(message, reason){
-        // await this.updateSong(message.channel);
         await message.channel.send(reason).catch(()=>{})
     }
 
@@ -63,11 +54,9 @@ export default class MusicPlayer extends MessageWorker {
                 for (let i = 0; i < msgs.size; i++) {
                     const isLast = i+1 === msgs.size;
                     if(!isLast){
-                        channel.bulkDelete(messages);
+                        channel.bulkDelete(messages, true);
                     }else{
-                        msgs.last().edit(content).then(msg => {
-                            this.updateReacts(msg);
-                        })
+                        msgs.last().edit(content);
                     }
                 }
             }else{
@@ -77,101 +66,77 @@ export default class MusicPlayer extends MessageWorker {
 
     }
 
-    async updateReacts(message){
-        // await message.reactions.removeAll();
-        // const queue = this.player.getQueue(message.guild.id);
-        // if(queue && queue.songs){
-        //     const songs = queue.songs;
-        //     if(queue.songs && songs.length > 0){
-        //         await message.react("⏹");
-        //         if(songs.length > 1){
-        //             await message.react("⏭");
-        //         }
-        //     }else{
-        //         message.reactions.removeAll().then();
-        //     }
-            // const ["⏮️","⏹️","⏭️"];
-            // msgs.last().edit(content/).then((msg) => {
-            //     reacts.forEach(r => {
-            //         msg.react(r)
-            //     })
-            // })
-        // }
 
+    getPlayer(guildId, voiceChannelId, textChannelId){
+        const manager = this._client.manager;
+        if(!manager.players.has(guildId) && voiceChannelId && textChannelId){
+            this._client.manager.create({
+                guild: guildId,
+                selfDeafen: true,
+                volume: 50,
+                voiceChannel: voiceChannelId,
+                textChannel: textChannelId,
+            });
+        }
+        return manager.players.get(guildId);
     }
 
-    async updateSong(channel) {
-        try{
-            const queue = this.player.getQueue(channel.guild.id);
-            const songs = queue.songs
-            if(queue.songs && songs.length > 0){
-                const song = songs[0];
-                const repeatModeText = song.queue && song.queue.repeatMode ? "🔁 " : "💿 ";
-                const que = songs.map((song, i) => `${i+1}. ${song.name} [${song.duration}]`);
-                const currentSong = new Discord.MessageEmbed()
-                    .setColor("LUMINOUS_VIVID_PINK")
-                    .setTitle(repeatModeText + `[${song.duration}] ${song.name}`)
-                    .setImage(song.thumbnail)
-                    .setTimestamp(new Date())
-                    .setURL(song.url);
-
-                if(que.length > 1){
-                    currentSong.addField("재생 목록", que.join("\n"));
-                }
-                // await channel.
-                // await channel.send(que.join("\n"));
-                await this.updateBotMessage(channel, {embeds: [currentSong]});
-            }else if(songs.length === 0){
-                const order = [
-                    {key: '나가', value: '바로 종료'},
-                    {key: '다음', value: '다음 곡'},
-                    {key: '반복', value: '한 곡 반복듣기'},
-                    {key: '그만', value: '반복듣기 끄기'},
-                    {key: '정리', value: '채널 모든 메시지 삭제'}
-                ];
-                await this.updateBotMessage(channel, {
-                    embeds: [
-                        new Discord.MessageEmbed()
-                            // .setAuthor(`made By 동매 (aka. reikop)`,
-                            //     null,
-                            //     `https://reikop.com`)
-                            .setTitle(`노래하는 코노슝 v0.3 명령어`)
-                            .setColor("DARK_BLUE")
-                            .setDescription("노래 제목 혹은 유튜브 URL을 입력하시면 자동으로 노래를 검색합니다.")
-                            // .setThumbnail("https://imgfiles-cdn.plaync.com/file/contents/download/20210923131701-aKxbqDhdNhkVeKMG09160-v4")
-                            .addField('명령어', order.map(o => `${o.key} : ${o.value}`).join("\n"), true)
-                            .setTimestamp()
-                    ]
-                })
+    async updateSong(player) {
+        const queue = player.queue;
+        const track = queue.current;
+        const channel = this._client.channels.cache.get(player. textChannel);
+        if(track){
+            const tracks = [queue.current];
+            for (let i = 0; i < queue.size; i++) {
+                tracks.push(queue[i]);
             }
-        }catch (e){
-            const order = [
-                {key: '나가', value: '바로 종료'},
-                {key: '다음', value: '다음 곡'},
-                {key: '반복', value: '한 곡 반복듣기'},
-                {key: '그만', value: '반복듣기 끄기'},
-                {key: '정리', value: '채널 모든 메시지 삭제'}
-            ];
-            await this.updateBotMessage(channel, {
-                embeds: [
-                    new Discord.MessageEmbed()
-                        // .setAuthor(`made By 동매 (aka. reikop)`,
-                        //     null,
-                        //     `https://reikop.com`)
-                        .setTitle(`노래하는 코노슝 v0.3 명령어`)
-                        .setColor("DARK_BLUE")
-                        .setDescription("노래 제목 혹은 유튜브 URL을 입력하시면 자동으로 노래를 검색합니다.")
-                        // .setThumbnail("https://imgfiles-cdn.plaync.com/file/contents/download/20210923131701-aKxbqDhdNhkVeKMG09160-v4")
-                        .addField('명령어', order.map(o => `${o.key} : ${o.value}`).join("\n"), true)
-                        .setTimestamp()
-                ]
-            })
+            const repeatModeText = player.queueRepeat ? "🔁 " : "💿 ";
+            const que = tracks.map((song, i) => `${i+1}. ${song.title} [${this.parseDuration(song.duration)}]`);
+            const currentSong = new Discord.MessageEmbed()
+                .setColor("LUMINOUS_VIVID_PINK")
+                .setTitle(repeatModeText + `[${this.parseDuration(track.duration)}] ${track.title}`)
+                // .setImage(track.thumbnail)
+                .setImage(`https://img.youtube.com/vi/${track.identifier}/0.jpg`)
+                // .setTimestamp(new Date())
+                .setFooter(`${track.requester.username}님의 신청곡`)
+                .setURL(track.uri);
+
+            if(que.length > 1){
+                currentSong.addField("재생 목록", que.join("\n"));
+            }
+            await this.updateBotMessage(channel, {embeds: [currentSong]});
+        }else if(queue.size === 0){
+            await this.sendDefaultMsg(channel)
         }
     }
 
-    clearAllChannel(channel) {
-        channel.messages.fetch({ limit: 100 }).then(messages => {
-            channel.bulkDelete(messages).then().catch();
+    async sendDefaultMsg(channel){
+        const order = [
+            {key: '나가', value: '바로 종료'},
+            {key: '다음', value: '다음 곡'},
+            {key: '반복', value: '한 곡 반복듣기'},
+            {key: '그만', value: '반복듣기 끄기'},
+            {key: '정리', value: '채널 모든 메시지 삭제'}
+        ];
+        await this.updateBotMessage(channel, {
+            embeds: [
+                new Discord.MessageEmbed()
+                    // .setAuthor(`made By 동매 (aka. reikop)`,
+                    //     null,
+                    //     `https://reikop.com`)
+                    .setTitle(`노래하는 코노슝 v0.4 명령어`)
+                    .setColor("DARK_BLUE")
+                    .setDescription("노래 제목 혹은 유튜브 URL을 입력하시면 자동으로 노래를 검색합니다.")
+                    // .setThumbnail("https://imgfiles-cdn.plaync.com/file/contents/download/20210923131701-aKxbqDhdNhkVeKMG09160-v4")
+                    .addField('명령어', order.map(o => `${o.key} : ${o.value}`).join("\n"), true)
+                    .setTimestamp()
+            ]
+        })
+    }
+
+    async clearAllChannel(channel) {
+        await channel.messages.fetch({ limit: 100 }).then(messages => {
+            channel.bulkDelete(messages, true).then().catch();
         });
 
 
@@ -223,49 +188,63 @@ export default class MusicPlayer extends MessageWorker {
             }
             const args = message.content.slice("!").trim().split(/ +/g);
             const command = args.shift();
-            let guildQueue = this.player.getQueue(message.guild.id);
+            let player = this.getPlayer(message.guild.id);
             if (command === '다음') {
-                if (guildQueue) {
-                    guildQueue.skip();
+                if (player) {
+                    player.stop();
                     message.delete();
                 }
+                setTimeout(() => {
+                    this.updateSong(player);
+                }, 1000)
             } else if (command === '정리') {
-                this.clearAllChannel(message.channel);
+                await this.clearAllChannel(message.channel);
+                await this.updateSong(player);
             } else if (command === '반복') {
-                guildQueue.setRepeatMode(RepeatMode.SONG);
+                player.setQueueRepeat(true)
                 message.delete();
-                await this.updateSong(message.channel);
+                await this.updateSong(player);
             } else if (command === '그만') {
-                guildQueue.setRepeatMode(RepeatMode.DISABLED);
+                player.setQueueRepeat(false)
                 message.delete();
-                await this.updateSong(message.channel);
+                await this.updateSong(player);
             } else if (command === '나가') {
-                if (guildQueue) {
-                    guildQueue.stop();
+                if (player) {
+                    player.destroy();
                 }
                 message.delete();
-                await this.updateSong(message.channel);
+                await this.sendDefaultMsg(message.channel);
             } else if (!message.author.bot) {
-                let queue = this.player.createQueue(message.guild.id);
+                const res = await this._client.manager.search(
+                    message.content,
+                    message.author
+                );
+                const player = this.getPlayer(message.guild.id, message.member.voice.channel.id, message.channel.id);
                 if(message.member.voice.channel){
-                    queue.join(message.member.voice.channel).then(async c => {
-                        queue.play(message.content).then(song => {
-                            this.updateSong(message.channel, song)
-                        }).catch(e => {
-                            if (!guildQueue) {
-                                queue.stop();
-                            }
-                            this.updateError(message, "음악을 재생할수 없어 종료합니다.");
-                        });
-                    }).catch(e => {
-                        this.updateError(message, "음성채널에 입장할수 없습니다.");
-                    });
-                }else{
-                    this.updateError(message, "`접속한 음성채널을 찾을 수 없습니다.`");
-                }
+                    player.connect();
+                    player.queue.add(res.tracks[0]);
 
+                    if (!player.playing && !player.paused && !player.queue.size){
+                        player.play();
+                    }
+
+                    if (
+                        !player.playing &&
+                        !player.paused &&
+                        player.queue.totalSize === res.tracks.length
+                    ){
+                        player.play();
+                    }
+                    await this.updateSong(player);
+                }else{
+                    await this.updateError(message, "`접속한 음성채널을 찾을 수 없습니다.`");
+                }
                 message.delete();
             }
         } catch (e) { }
+    }
+
+     parseDuration(SECONDS){
+        return new Date(SECONDS).toISOString().substr(11, 8)
     }
 }
