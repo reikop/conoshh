@@ -1,8 +1,12 @@
 import MessageWorker from "../MessageWorker.js";
 import Discord from "discord.js";
-
 import _ from "lodash"
 import {Manager} from "erela.js";
+
+const LAVALINK_HOST = process.env.LAVALINK_HOST;
+const LAVALINK_PORT = process.env.LAVALINK_PORT;
+const LAVALINK_PASSWD = process.env.LAVALINK_PASSWD;
+
 
 /**
  * https://github.com/SushiBtw/discord-music-player
@@ -14,9 +18,9 @@ export default class MusicPlayer extends MessageWorker {
         client.manager = new Manager({
             nodes: [
                 {
-                    host:"10.0.0.250",
-                    port: 2333,
-                    password: "youshallnotpass",
+                    host: LAVALINK_HOST,
+                    port: parseInt(LAVALINK_PORT),
+                    password: LAVALINK_PASSWD,
                 },
             ],
             send(id, payload) {
@@ -76,7 +80,7 @@ export default class MusicPlayer extends MessageWorker {
                 volume: 50,
                 voiceChannel: voiceChannelId,
                 textChannel: textChannelId,
-            });
+            })
         }
         return manager.players.get(guildId);
     }
@@ -84,21 +88,23 @@ export default class MusicPlayer extends MessageWorker {
     async updateSong(player) {
         const queue = player.queue;
         const track = queue.current;
-        const channel = this._client.channels.cache.get(player. textChannel);
+        const channel = this._client.channels.cache.get(player.textChannel);
         if(track){
             const tracks = [queue.current];
             for (let i = 0; i < queue.size; i++) {
                 tracks.push(queue[i]);
             }
             const repeatModeText = player.queueRepeat ? "🔁 " : "💿 ";
-            const que = tracks.map((song, i) => `${i+1}. ${song.title} [${this.parseDuration(song.duration)}]`);
+            const que = tracks.map((song, i) => `${i+1}. ${song.title} \`${this.parseDuration(song.duration)}\``);
+            const a = this._client.users.cache.find(user => user.id === track.requester.id);
+            console.info(a);
             const currentSong = new Discord.MessageEmbed()
                 .setColor("LUMINOUS_VIVID_PINK")
                 .setTitle(repeatModeText + `[${this.parseDuration(track.duration)}] ${track.title}`)
                 // .setImage(track.thumbnail)
                 .setImage(`https://img.youtube.com/vi/${track.identifier}/0.jpg`)
-                // .setTimestamp(new Date())
-                .setFooter(`${track.requester.username}님의 신청곡`)
+                .setTimestamp(new Date())
+                .setFooter(`${track.requester.username}님의 선곡`)
                 .setURL(track.uri);
 
             if(que.length > 1){
