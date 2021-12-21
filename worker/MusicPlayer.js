@@ -28,7 +28,16 @@ export default class MusicPlayer extends MessageWorker {
                 if (guild) guild.shard.send(payload);
             },
         })
+
+            .on("playerMove", (player, currentChannel, newChannel)=> {
+                player.setVoiceChannel(newChannel);
+            })
             .on("trackStuck", (player) => {
+                this.updateSong(player);
+            }).on("trackError", (player) => {
+                this.updateSong(player);
+            })
+            .on("trackStart", (player) => {
                 this.updateSong(player);
             })
             .on("queueEnd", (player) => {
@@ -96,8 +105,6 @@ export default class MusicPlayer extends MessageWorker {
             }
             const repeatModeText = player.queueRepeat ? "🔁 " : "💿 ";
             const que = tracks.map((song, i) => `${i+1}. ${song.title} \`${this.parseDuration(song.duration)}\``);
-            const a = this._client.users.cache.find(user => user.id === track.requester.id);
-            console.info(a);
             const currentSong = new Discord.MessageEmbed()
                 .setColor("LUMINOUS_VIVID_PINK")
                 .setTitle(repeatModeText + `[${this.parseDuration(track.duration)}] ${track.title}`)
