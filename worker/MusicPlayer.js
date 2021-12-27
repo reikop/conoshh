@@ -54,13 +54,13 @@ export default class MusicPlayer extends MessageWorker {
                 for (let i = 0; i < msgs.size; i++) {
                     const isLast = i+1 === msgs.size;
                     if(!isLast){
-                        channel.bulkDelete(messages, true);
+                        channel.bulkDelete(messages, true).catch(()=>{})
                     }else{
-                        msgs.last().edit(content);
+                        msgs.last().edit(content).catch(()=>{})
                     }
                 }
             }else{
-                channel.send(content)
+                channel.send(content).catch(()=>{})
             }
         });
 
