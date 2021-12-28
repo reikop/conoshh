@@ -17,6 +17,6 @@ client.once("ready", () => {
 });
 
 
-// process.on("uncaughtException", error => {
-//     console.info("uncaughtException", error.message)
-// })
+process.on("uncaughtException", error => {
+    console.info("uncaughtException", error.message)
+})
