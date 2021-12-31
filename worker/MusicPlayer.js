@@ -57,7 +57,7 @@ export default class MusicPlayer extends MessageWorker {
     }
 
     async updateError(message, reason){
-        await message.channel.send(reason).catch(()=>{})
+        await mssage.channel.send(reason).catch((e)=>{console.info(e)})
     }
 
     async updateBotMessage(channel, content){
@@ -228,18 +228,15 @@ export default class MusicPlayer extends MessageWorker {
                 message.delete();
                 await this.sendDefaultMsg(message.channel);
             } else if (!message.author.bot) {
-                const res = await this._client.manager.search(
-                    message.content,
-                    message.author
-                );
-                const player = this.getPlayer(message.guild.id, message.member.voice.channel.id, message.channel.id);
                 if(message.member.voice.channel){
+                    const res = await this._client.manager.search(
+                        message.content,
+                        message.author
+                    );
+                    const player = this.getPlayer(message.guild.id, message.member.voice.channel.id, message.channel.id);
                     player.connect();
                     player.queue.add(res.tracks[0]);
 
-                    if (!player.playing && !player.paused && !player.queue.size){
-                        player.play();
-                    }
 
                     if (
                         !player.playing &&
@@ -254,7 +251,8 @@ export default class MusicPlayer extends MessageWorker {
                 }
                 message.delete();
             }
-        } catch (e) { }
+        } catch (e) {
+        }
     }
 
      parseDuration(SECONDS){
