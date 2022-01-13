@@ -237,6 +237,9 @@ export default class MusicPlayer extends MessageWorker {
                     player.connect();
                     player.queue.add(res.tracks[0]);
 
+                    if (!player.playing && !player.paused && !player.queue.size){
+                        player.play();
+                    }
 
                     if (
                         !player.playing &&
