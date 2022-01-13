@@ -16,7 +16,7 @@ client.once("ready", () => {
     router.registWorker("*", new MusicPlayer(client));
 });
 
-
-process.on("uncaughtException", error => {
-    console.info("uncaughtException", error.message)
-})
+//
+// process.on("uncaughtException", error => {
+//     console.info("uncaughtException", error.message)
+// })
