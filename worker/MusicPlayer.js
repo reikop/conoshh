@@ -104,12 +104,13 @@ export default class MusicPlayer extends MessageWorker {
                 tracks.push(queue[i]);
             }
             const repeatModeText = player.queueRepeat ? "🔁 " : "💿 ";
-            const que = tracks.map((song, i) => `${i+1}. ${song.title} \`${this.parseDuration(song.duration)}\``);
+            const que = tracks.map((song, i) => `${i+1}. ${song.title} \`${this.parseDuration(song)}\``);
             const currentSong = new Discord.MessageEmbed()
-                .setColor("LUMINOUS_VIVID_PINK")
-                .setTitle(repeatModeText + `[${this.parseDuration(track.duration)}] ${track.title}`)
+                .setColor("RANDOM")
+                .setTitle(repeatModeText + `[${this.parseDuration(track)}] ${track.title}`)
                 // .setImage(track.thumbnail)
                 .setImage(`https://img.youtube.com/vi/${track.identifier}/0.jpg`)
+                .setAuthor(track.author)
                 .setTimestamp(new Date())
                 .setFooter(`${track.requester.username}님의 선곡`)
                 .setURL(track.uri);
@@ -285,7 +286,11 @@ export default class MusicPlayer extends MessageWorker {
         }
     }
 
-     parseDuration(SECONDS){
-        return new Date(SECONDS).toISOString().substr(11, 8)
+     parseDuration(song){
+        if(song.isStream){
+            return "LIVE"
+        }else{
+            return new Date(song.duration).toISOString().substr(11, 8)
+        }
     }
 }
