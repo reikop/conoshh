@@ -164,38 +164,65 @@ export default class MusicPlayer extends MessageWorker {
         await this.getMusicServerLists();
     }
 
+    async removeMusicServer({guildId, id}){
+        await this.api.delete(`https://reikop.com:8081/api/music/${guildId}/${id}`);
+        await this.getMusicServerLists();
+    }
+
     async getMusicServerLists(){
         const {data} =  await this.api.get("https://reikop.com:8081/api/music");
-        this._servers =data;
+        this._servers = data;
     }
 
     async receiveMessage(message) {
         try {
+            const server = _.find(this.servers, {guildId: message.guild.id, id: message.channel.id});
             if (message.author.id === '366297167247310860') {
                 if (message.content === "코노슝 설치") {
-                    const permis = ['SEND_MESSAGES', 'MANAGE_MESSAGES', 'CONNECT', 'SPEAK'];
-                    const permit = !permis.some(p => !message.guild.me.permissions.has(p));
-                    if(permit){
-                        await this.addMusicServer(message.channel);
+                    if(server == null){
+                        const permis = ['SEND_MESSAGES', 'MANAGE_MESSAGES', 'CONNECT', 'SPEAK'];
+                        const permit = !permis.some(p => !message.guild.me.permissions.has(p));
+                        if(permit){
+                            await this.addMusicServer(message.channel);
+                            await message.channel.send({
+                                embeds: [
+                                    new Discord.MessageEmbed()
+                                        .setColor("GOLD")
+                                        .setTitle("코노슝 설치가 완료 되었습니다.")
+                                        .setDescription("개발자님 전용 명령어 입니다.")
+                                ]
+                            });
+                        }else{
+                            await message.channel.send('필요한 `권한`이 없습니다. 봇을 다시 등록하거나 관리자에게 문의해주세요.');
+                        }
+                        await message.delete();
+                    }else{
                         await message.channel.send({
                             embeds: [
                                 new Discord.MessageEmbed()
                                     .setColor("GOLD")
-                                    .setTitle("코노슝 설치가 완료 되었습니다.")
+                                    .setTitle("코노슝 설치가 이미 되었습니다.\n삭제 하려면 명령어를 입력해 주세요")
                                     .setDescription("개발자 전용 명령어 입니다.")
                             ]
                         });
-                    }else{
-                        await message.channel.send('필요한 `권한`이 없습니다. 봇을 다시 등록하거나 관리자에게 문의해주세요.');
                     }
-                    await message.delete();
+
                     return;
+                }else if (message.content === "코노슝 삭제") {
+                    await this.removeMusicServer(message.channel);
+                    await message.channel.send({
+                        embeds: [
+                            new Discord.MessageEmbed()
+                                .setColor("GOLD")
+                                .setTitle("코노슝 삭제가 완료 되었습니다.")
+                        ]
+                    });
                 }
             }
-            const server = _.find(this.servers, {guildId: message.guild.id, id: message.channel.id});
             if (!server) {
                 return;
             }
+
             if (!message.author.bot){
                 message.channel.sendTyping().then().catch();
             }
