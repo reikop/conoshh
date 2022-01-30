@@ -177,9 +177,11 @@ export default class MusicPlayer extends MessageWorker {
 
     async receiveMessage(message) {
         try {
-            const server = _.find(this.servers, {guildId: message.guild.id, id: message.channel.id});
+
             if (message.author.id === '366297167247310860') {
-                if (message.content === "코노슝 설치") {
+                await this.getMusicServerLists();
+                const server = _.find(this.servers, {guildId: message.guild.id, id: message.channel.id});
+                if (message.content.startsWith("코노슝 설치")){
                     if(server == null){
                         const permis = ['SEND_MESSAGES', 'MANAGE_MESSAGES', 'CONNECT', 'SPEAK'];
                         const permit = !permis.some(p => !message.guild.me.permissions.has(p));
@@ -220,6 +222,7 @@ export default class MusicPlayer extends MessageWorker {
                     });
                 }
             }
+            const server = _.find(this.servers, {guildId: message.guild.id, id: message.channel.id});
             if (!server) {
                 return;
             }
