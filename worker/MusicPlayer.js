@@ -30,9 +30,22 @@ export default class MusicPlayer extends MessageWorker {
         })
 
             .on("playerMove", (player, currentChannel, newChannel)=> {
-                player.setVoiceChannel(newChannel);
+                if(newChannel){
+                    player.setVoiceChannel(newChannel);
+                    setTimeout(() => {
+                        player.pause(false);
+                    }, 500)
+                }else{
+                    player.queue.current = null;
+                    player.queue.clear();
+                    player.stop();
+                    player.destroy();
+                    this.updateSong(player);
+                }
             })
             .on("trackStuck", (player) => {
+                this.updateSong(player);
+            }).on("trackEnd", (player) => {
                 this.updateSong(player);
             }).on("trackError", (player) => {
                 this.updateSong(player);
@@ -57,7 +70,7 @@ export default class MusicPlayer extends MessageWorker {
     }
 
     async updateError(message, reason){
-        await mssage.channel.send(reason).catch((e)=>{console.info(e)})
+        await message.channel.send(reason).catch((e)=>{console.info(e)})
     }
 
     async updateBotMessage(channel, content){
@@ -86,7 +99,7 @@ export default class MusicPlayer extends MessageWorker {
             this._client.manager.create({
                 guild: guildId,
                 selfDeafen: true,
-                volume: 50,
+                volume: 30,
                 voiceChannel: voiceChannelId,
                 textChannel: textChannelId,
             })
