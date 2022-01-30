@@ -6,7 +6,7 @@ import {Manager} from "erela.js";
 const LAVALINK_HOST = process.env.LAVALINK_HOST;
 const LAVALINK_PORT = process.env.LAVALINK_PORT;
 const LAVALINK_PASSWD = process.env.LAVALINK_PASSWD;
-
+const BOT_SEQ = process.env.BOT_SEQ || "1";
 
 /**
  * https://github.com/SushiBtw/discord-music-player
@@ -194,20 +194,24 @@ export default class MusicPlayer extends MessageWorker {
             if (message.author.id === '366297167247310860') {
                 await this.getMusicServerLists();
                 const server = _.find(this.servers, {guildId: message.guild.id, id: message.channel.id});
-                if (message.content.startsWith("코노슝 설치")){
+                const reg = /코노슝 설치\s?(\d)?/;
+                if (message.content.match(reg)){
                     if(server == null){
                         const permis = ['SEND_MESSAGES', 'MANAGE_MESSAGES', 'CONNECT', 'SPEAK'];
                         const permit = !permis.some(p => !message.guild.me.permissions.has(p));
                         if(permit){
-                            await this.addMusicServer(message.channel);
-                            await message.channel.send({
-                                embeds: [
-                                    new Discord.MessageEmbed()
-                                        .setColor("GOLD")
-                                        .setTitle("코노슝 설치가 완료 되었습니다.")
-                                        .setDescription("개발자님 전용 명령어 입니다.")
-                                ]
-                            });
+                            const seq = message.content.match(reg)[1] || "1";
+                            if(seq === BOT_SEQ){
+                                await this.addMusicServer(message.channel);
+                                await message.channel.send({
+                                    embeds: [
+                                        new Discord.MessageEmbed()
+                                            .setColor("GOLD")
+                                            .setTitle("코노슝 설치가 완료 되었습니다.")
+                                            .setDescription(message.author.username+" 개발자님 전용 명령어 입니다.")
+                                    ]
+                                });
+                            }
                         }else{
                             await message.channel.send('필요한 `권한`이 없습니다. 봇을 다시 등록하거나 관리자에게 문의해주세요.');
                         }
