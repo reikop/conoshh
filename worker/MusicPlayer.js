@@ -3,6 +3,7 @@ import Discord from "discord.js";
 import _ from "lodash"
 import {Manager} from "erela.js";
 
+const HOST = "http://localhost:8081";
 const LAVALINK_HOST = process.env.LAVALINK_HOST;
 const LAVALINK_PORT = process.env.LAVALINK_PORT;
 const LAVALINK_PASSWD = process.env.LAVALINK_PASSWD;
@@ -136,7 +137,20 @@ export default class MusicPlayer extends MessageWorker {
             await this.sendDefaultMsg(channel)
         }
     }
+    
+    async messageDelete(message){
+        const server = _.find(this.servers, {guildId: message.guild.id, id: message.channel.id, bot_id:BOT_SEQ});
+        if(server){
+            try{
+                await message.delete();
+            }catch (e) {
+                console.error("message DELETE ERROR", e);
+            }
 
+        }
+    }
+    
+    
     async sendDefaultMsg(channel){
         const order = [
             {key: '나가', value: '바로 종료'},
@@ -151,7 +165,7 @@ export default class MusicPlayer extends MessageWorker {
                     // .setAuthor(`made By 동매 (aka. reikop)`,
                     //     null,
                     //     `https://reikop.com`)
-                    .setTitle(`노래하는 코노슝 v0.4 명령어`)
+                    .setTitle(`노래하는 코노슝#${BOT_SEQ} v0.4 명령어`)
                     .setColor("DARK_BLUE")
                     .setDescription("노래 제목 혹은 유튜브 URL을 입력하시면 자동으로 노래를 검색합니다.")
                     // .setThumbnail("https://imgfiles-cdn.plaync.com/file/contents/download/20210923131701-aKxbqDhdNhkVeKMG09160-v4")
@@ -162,29 +176,26 @@ export default class MusicPlayer extends MessageWorker {
     }
 
     async clearAllChannel(channel) {
-        await channel.messages.fetch({ limit: 100 }).then(messages => {
-            channel.bulkDelete(messages, true).then().catch();
+        await channel.messages.fetch({ limit: 100 }).then(async messages => {
+            await channel.bulkDelete(messages, true);
         });
-
-
-        // await channel.bulkDelete(10).catch()
-    //     messages.forEach(message => message.delete());
     }
 
     async addMusicServer({guildId, id}){
+        console.info(guildId, id, BOT_SEQ)
         const params = new URLSearchParams();
         params.append('id', id);
-        await this.api.patch(`https://reikop.com:8081/api/music/${guildId}/${BOT_SEQ}`, params);
+        await this.api.patch(`${HOST}/api/music/${guildId}/${BOT_SEQ}`, params);
         await this.getMusicServerLists();
     }
 
     async removeMusicServer({guildId, id}){
-        await this.api.delete(`https://reikop.com:8081/api/music/${guildId}/${id}/${BOT_SEQ}`);
+        await this.api.delete(`${HOST}/api/music/${guildId}/${id}/${BOT_SEQ}`);
         await this.getMusicServerLists();
     }
 
     async getMusicServerLists(){
-        const {data} =  await this.api.get("https://reikop.com:8081/api/music");
+        const {data} =  await this.api.get(`${HOST}/api/music`);
         this._servers = data;
     }
 
@@ -195,6 +206,7 @@ export default class MusicPlayer extends MessageWorker {
                 await this.getMusicServerLists();
                 const server = _.find(this.servers, {guildId: message.guild.id, id: message.channel.id, bot_id:BOT_SEQ});
                 const reg = /코노슝 설치\s?(\d)?/;
+                const delReg = /코노슝 삭제\s?(\d)?/;
                 if (message.content.match(reg)){
                     if(server == null){
                         const permis = ['SEND_MESSAGES', 'MANAGE_MESSAGES', 'CONNECT', 'SPEAK'];
@@ -207,7 +219,7 @@ export default class MusicPlayer extends MessageWorker {
                                     embeds: [
                                         new Discord.MessageEmbed()
                                             .setColor("GOLD")
-                                            .setTitle("코노슝 설치가 완료 되었습니다.")
+                                            .setTitle(`코노슝#${BOT_SEQ} 설치가 완료 되었습니다.`)
                                             .setDescription(message.author.username+" 개발자님 전용 명령어 입니다.")
                                     ]
                                 });
@@ -215,7 +227,6 @@ export default class MusicPlayer extends MessageWorker {
                         }else{
                             await message.channel.send('필요한 `권한`이 없습니다. 봇을 다시 등록하거나 관리자에게 문의해주세요.');
                         }
-                        message.delete().then().catch();
                     }else{
                         await message.channel.send({
                             embeds: [
@@ -228,15 +239,18 @@ export default class MusicPlayer extends MessageWorker {
                     }
 
                     return;
-                }else if (message.content === "코노슝 삭제") {
-                    await this.removeMusicServer(message.channel);
-                    await message.channel.send({
-                        embeds: [
-                            new Discord.MessageEmbed()
-                                .setColor("GOLD")
-                                .setTitle("코노슝 삭제가 완료 되었습니다.")
-                        ]
-                    });
+                }else if (message.content.match(delReg)) {
+                    const seq = message.content.match(delReg)[1] || "1";
+                    if(seq === BOT_SEQ){
+                        await this.removeMusicServer(message.channel);
+                        await message.channel.send({
+                            embeds: [
+                                new Discord.MessageEmbed()
+                                    .setColor("GOLD")
+                                    .setTitle("코노슝 삭제가 완료 되었습니다.")
+                            ]
+                        });
+                    }
                 }
             }
             const server = _.find(this.servers, {guildId: message.guild.id, id: message.channel.id, bot_id: BOT_SEQ});
@@ -253,27 +267,29 @@ export default class MusicPlayer extends MessageWorker {
             if (command === '다음') {
                 if (player) {
                     player.stop();
-                    message.delete().then().catch();
+                    await this.messageDelete(message)
                 }
                 setTimeout(() => {
                     this.updateSong(player);
                 }, 1000)
             } else if (command === '정리') {
                 await this.clearAllChannel(message.channel);
-                await this.updateSong(player);
+                setTimeout(() => {
+                    this.updateSong(player);
+                }, 1000)
             } else if (command === '반복') {
                 player.setQueueRepeat(true)
-                message.delete().then().catch();
+                await this.messageDelete(message)
                 await this.updateSong(player);
             } else if (command === '그만') {
                 player.setQueueRepeat(false)
-                message.delete().then().catch();
+                await this.messageDelete(message)
                 await this.updateSong(player);
             } else if (command === '나가') {
                 if (player) {
                     player.destroy();
                 }
-                message.delete().then().catch();
+                await this.messageDelete(message)
                 await this.sendDefaultMsg(message.channel);
             } else if (!message.author.bot) {
                 if(message.member.voice.channel){
@@ -300,7 +316,8 @@ export default class MusicPlayer extends MessageWorker {
                 }else{
                     await this.updateError(message, "`접속한 음성채널을 찾을 수 없습니다.`");
                 }
-                message.delete().then().catch();
+
+                await this.messageDelete(message)
             }
         } catch (e) {
         }
