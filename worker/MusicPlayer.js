@@ -193,7 +193,7 @@ export default class MusicPlayer extends MessageWorker {
 
             if (message.author.id === '366297167247310860') {
                 await this.getMusicServerLists();
-                const server = _.find(this.servers, {guildId: message.guild.id, id: message.channel.id});
+                const server = _.find(this.servers, {guildId: message.guild.id, id: message.channel.id, bot_id:BOT_SEQ});
                 const reg = /코노슝 설치\s?(\d)?/;
                 if (message.content.match(reg)){
                     if(server == null){
@@ -239,7 +239,7 @@ export default class MusicPlayer extends MessageWorker {
                     });
                 }
             }
-            const server = _.find(this.servers, {guildId: message.guild.id, id: message.channel.id});
+            const server = _.find(this.servers, {guildId: message.guild.id, id: message.channel.id, bot_id: BOT_SEQ});
             if (!server) {
                 return;
             }
