@@ -3,7 +3,7 @@ import Discord from "discord.js";
 import _ from "lodash"
 import {Manager} from "erela.js";
 
-const HOST = "http://localhost:8081";
+const HOST = "https://reikop.com:8081";
 const LAVALINK_HOST = process.env.LAVALINK_HOST;
 const LAVALINK_PORT = process.env.LAVALINK_PORT;
 const LAVALINK_PASSWD = process.env.LAVALINK_PASSWD;
