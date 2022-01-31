@@ -174,12 +174,12 @@ export default class MusicPlayer extends MessageWorker {
     async addMusicServer({guildId, id}){
         const params = new URLSearchParams();
         params.append('id', id);
-        await this.api.patch("https://reikop.com:8081/api/music/" + guildId, params);
+        await this.api.patch(`https://reikop.com:8081/api/music/${guildId}/${BOT_SEQ}`, params);
         await this.getMusicServerLists();
     }
 
     async removeMusicServer({guildId, id}){
-        await this.api.delete(`https://reikop.com:8081/api/music/${guildId}/${id}`);
+        await this.api.delete(`https://reikop.com:8081/api/music/${guildId}/${id}/${BOT_SEQ}`);
         await this.getMusicServerLists();
     }
 
@@ -215,7 +215,7 @@ export default class MusicPlayer extends MessageWorker {
                         }else{
                             await message.channel.send('필요한 `권한`이 없습니다. 봇을 다시 등록하거나 관리자에게 문의해주세요.');
                         }
-                        await message.delete();
+                        message.delete().then().catch();
                     }else{
                         await message.channel.send({
                             embeds: [
@@ -253,7 +253,7 @@ export default class MusicPlayer extends MessageWorker {
             if (command === '다음') {
                 if (player) {
                     player.stop();
-                    message.delete();
+                    message.delete().then().catch();
                 }
                 setTimeout(() => {
                     this.updateSong(player);
@@ -263,17 +263,17 @@ export default class MusicPlayer extends MessageWorker {
                 await this.updateSong(player);
             } else if (command === '반복') {
                 player.setQueueRepeat(true)
-                message.delete();
+                message.delete().then().catch();
                 await this.updateSong(player);
             } else if (command === '그만') {
                 player.setQueueRepeat(false)
-                message.delete();
+                message.delete().then().catch();
                 await this.updateSong(player);
             } else if (command === '나가') {
                 if (player) {
                     player.destroy();
                 }
-                message.delete();
+                message.delete().then().catch();
                 await this.sendDefaultMsg(message.channel);
             } else if (!message.author.bot) {
                 if(message.member.voice.channel){
@@ -300,7 +300,7 @@ export default class MusicPlayer extends MessageWorker {
                 }else{
                     await this.updateError(message, "`접속한 음성채널을 찾을 수 없습니다.`");
                 }
-                message.delete();
+                message.delete().then().catch();
             }
         } catch (e) {
         }
