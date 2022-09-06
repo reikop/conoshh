@@ -1,6 +1,6 @@
 FROM node:16-alpine
 
-
+RUN apk add --no-cache git
 RUN mkdir -p /usr/src/bot
 WORKDIR /usr/src/bot
 

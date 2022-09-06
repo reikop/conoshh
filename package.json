@@ -1,6 +1,6 @@
 {
   "name": "conoshh",
-  "version": "0.3.0",
+  "version": "0.3.2",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -23,7 +23,7 @@
     "args-parser": "^1.2.0",
     "axios": "^0.21.1",
     "discord.js": "^13.1.0",
-    "erela.js": "^2.3.3",
+    "erela.js": "github:menudocs/erela.js#build",
     "lodash": "^4.17.21",
     "numeral": "^2.0.6"
   },

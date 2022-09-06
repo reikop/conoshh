@@ -60,9 +60,11 @@ export default class MusicPlayer extends MessageWorker {
             });
 
         this._client = client;
-        this.getMusicServerLists().then();
-        client.manager.init(client.user.id);
-        client.on("raw", (d) => client.manager.updateVoiceState(d));
+        this.getMusicServerLists().then(() => {
+            client.manager.init(client.user.id);
+            client.on("raw", (d) => client.manager.updateVoiceState(d));
+        }).catch(e => console.error(e));
+
     }
     _client;
     _servers = [];
@@ -185,7 +187,7 @@ export default class MusicPlayer extends MessageWorker {
         console.info(guildId, id, BOT_SEQ)
         const params = new URLSearchParams();
         params.append('id', id);
-        await this.api.patch(`${HOST}/api/music/${guildId}/${BOT_SEQ}`, params);
+        await this.api.patch(`${HOST}/api/music/${guildId}/${BOT_SEQ}`, params).catch(e => console.error(e))
         await this.getMusicServerLists();
     }
 
@@ -320,6 +322,7 @@ export default class MusicPlayer extends MessageWorker {
                 await this.messageDelete(message)
             }
         } catch (e) {
+            console.trace(e);
         }
     }
 
