@@ -20,12 +20,12 @@
   },
   "homepage": "https://github.com/reikop/AionDiscordBot#readme",
   "dependencies": {
-    "args-parser": "^1.2.0",
-    "axios": "^0.21.1",
-    "discord.js": "^13.1.0",
-    "erela.js": "github:menudocs/erela.js#build",
+    "axios": "^1.2.1",
+    "discord.js": "^14.7.1",
+    "erela.js": "^2.4.0",
     "lodash": "^4.17.21",
-    "numeral": "^2.0.6"
+    "numeral": "^2.0.6",
+    "poru": "^4.1.0"
   },
   "type": "module"
 }
